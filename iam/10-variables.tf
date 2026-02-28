@@ -147,6 +147,7 @@ variable "users" {
     managed_policy_arns = optional(list(string), [])
     inline_policies     = optional(map(string), {})
     groups              = optional(list(string), [])
+    group_keys          = optional(list(string), [])
 
     tags = optional(map(string), {})
   }))

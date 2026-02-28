@@ -74,9 +74,12 @@ resource "aws_iam_user_policy" "this" {
 resource "aws_iam_user_group_membership" "this" {
   for_each = {
     for key, user in local.all_users : key => user
-    if length(user.groups) > 0
+    if length(user.groups) > 0 || length(user.group_keys) > 0
   }
 
-  user   = aws_iam_user.this[each.key].name
-  groups = each.value.groups
+  user = aws_iam_user.this[each.key].name
+  groups = concat(
+    each.value.groups,
+    [for gk in each.value.group_keys : aws_iam_group.this[gk].name]
+  )
 }
