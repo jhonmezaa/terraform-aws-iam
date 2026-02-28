@@ -173,56 +173,57 @@ module "iam" {
 
 ## Requirements
 
-| Name | Version |
-|------|---------|
-| terraform | ~> 1.0 |
-| aws | ~> 6.0 |
+| Name      | Version |
+| --------- | ------- |
+| terraform | ~> 1.0  |
+| aws       | ~> 6.0  |
 
 ## Inputs
 
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
-| create | Whether to create IAM resources | `bool` | `true` |
-| account_name | Account name for resource naming | `string` | required |
-| project_name | Project name for resource naming | `string` | required |
-| region_prefix | Region prefix override | `string` | `null` (auto-detected) |
-| use_region_prefix | Include region prefix in names | `bool` | `true` |
-| tags | Tags for all resources | `map(string)` | `{}` |
-| roles | Map of IAM roles to create | `map(object)` | `{}` |
-| policies | Map of IAM policies to create | `map(object)` | `{}` |
-| users | Map of IAM users to create | `map(object)` | `{}` |
-| groups | Map of IAM groups to create | `map(object)` | `{}` |
-| oidc_providers | Map of OIDC providers to create | `map(object)` | `{}` |
-| account_settings | Account-level IAM settings | `object` | `null` |
+| Name              | Description                      | Type          | Default                |
+| ----------------- | -------------------------------- | ------------- | ---------------------- |
+| create            | Whether to create IAM resources  | `bool`        | `true`                 |
+| account_name      | Account name for resource naming | `string`      | required               |
+| project_name      | Project name for resource naming | `string`      | required               |
+| region_prefix     | Region prefix override           | `string`      | `null` (auto-detected) |
+| use_region_prefix | Include region prefix in names   | `bool`        | `true`                 |
+| tags              | Tags for all resources           | `map(string)` | `{}`                   |
+| roles             | Map of IAM roles to create       | `map(object)` | `{}`                   |
+| policies          | Map of IAM policies to create    | `map(object)` | `{}`                   |
+| users             | Map of IAM users to create       | `map(object)` | `{}`                   |
+| groups            | Map of IAM groups to create      | `map(object)` | `{}`                   |
+| oidc_providers    | Map of OIDC providers to create  | `map(object)` | `{}`                   |
+| account_settings  | Account-level IAM settings       | `object`      | `null`                 |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| roles | Map of role details (ARN, name, unique_id) |
-| role_arns | Map of role ARNs |
-| role_names | Map of role names |
-| instance_profiles | Map of instance profile details |
-| instance_profile_arns | Map of instance profile ARNs |
-| policies | Map of policy details (ARN, name, id) |
-| policy_arns | Map of policy ARNs |
-| users | Map of user details (ARN, name, unique_id) |
-| user_arns | Map of user ARNs |
-| user_login_profiles | Map of encrypted login profile details |
-| user_access_keys | Map of access key details |
-| user_access_key_ids | Map of access key IDs |
-| user_access_key_secrets | Map of access key secrets (sensitive) |
-| groups | Map of group details (ARN, name, unique_id) |
-| group_arns | Map of group ARNs |
-| group_names | Map of group names |
-| oidc_providers | Map of OIDC provider details |
-| oidc_provider_arns | Map of OIDC provider ARNs |
+| Name                    | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| roles                   | Map of role details (ARN, name, unique_id)  |
+| role_arns               | Map of role ARNs                            |
+| role_names              | Map of role names                           |
+| instance_profiles       | Map of instance profile details             |
+| instance_profile_arns   | Map of instance profile ARNs                |
+| policies                | Map of policy details (ARN, name, id)       |
+| policy_arns             | Map of policy ARNs                          |
+| users                   | Map of user details (ARN, name, unique_id)  |
+| user_arns               | Map of user ARNs                            |
+| user_login_profiles     | Map of encrypted login profile details      |
+| user_access_keys        | Map of access key details                   |
+| user_access_key_ids     | Map of access key IDs                       |
+| user_access_key_secrets | Map of access key secrets (sensitive)       |
+| groups                  | Map of group details (ARN, name, unique_id) |
+| group_arns              | Map of group ARNs                           |
+| group_names             | Map of group names                          |
+| oidc_providers          | Map of OIDC provider details                |
+| oidc_provider_arns      | Map of OIDC provider ARNs                   |
 
 ## Naming Convention
 
 Resources follow the pattern: `{region_prefix}-iam-{type}-{account_name}-{project_name}-{key}`
 
 Examples:
+
 - Role: `ause1-iam-role-prod-myapp-lambda-execution`
 - Policy: `ause1-iam-policy-prod-myapp-s3-read`
 - Group: `ause1-iam-group-prod-myapp-developers`
