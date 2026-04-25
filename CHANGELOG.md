@@ -1,5 +1,12 @@
 # Changelog
 
+
+## [v1.1.2] - 2026-04-25
+
+### Changed
+
+- Update README documentation and CHANGELOG formatting
+
 All notable changes to this project will be documented in this file.
 
 ## [1.0.0] - 2026-02-27
