@@ -1,5 +1,6 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
 
 ## [v1.1.4] - 2026-10-27
 
@@ -22,9 +23,7 @@
 
 - Update README documentation and CHANGELOG formatting
 
-All notable changes to this project will be documented in this file.
-
-## [1.0.0] - 2026-02-27
+## [v1.0.0] - 2026-02-27
 
 ### Added
 
