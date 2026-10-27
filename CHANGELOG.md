@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.5] - 2026-10-27
+
+### Changed
+
+- Docs: normalize CHANGELOG format (preamble moved to the top, `v`-prefixed version headers)
+- Docs: add missing CHANGELOG entries for v1.1.0 and v1.1.1
+
 ## [v1.1.4] - 2026-10-27
 
 ### Fixed
@@ -22,6 +29,18 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Update README documentation and CHANGELOG formatting
+
+## [v1.1.1] - 2026-02-28
+
+### Changed
+
+- Update README
+
+## [v1.1.0] - 2026-02-27
+
+### Added
+
+- `group_keys` support for user group membership: users can reference groups created in the same module by key instead of the full generated group name
 
 ## [v1.0.0] - 2026-02-27
 
