@@ -12,11 +12,21 @@ data "aws_iam_policy_document" "role_trust" {
     content {
       sid     = "AllowServiceAssume"
       effect  = "Allow"
-      actions = ["sts:AssumeRole"]
+      actions = distinct(concat(["sts:AssumeRole"], each.value.trust_policy_extra_actions))
 
       principals {
         type        = "Service"
         identifiers = each.value.trusted_services
+      }
+
+      dynamic "condition" {
+        for_each = each.value.trust_policy_conditions
+
+        content {
+          test     = condition.value.test
+          variable = condition.value.variable
+          values   = condition.value.values
+        }
       }
     }
   }
@@ -28,11 +38,21 @@ data "aws_iam_policy_document" "role_trust" {
     content {
       sid     = "AllowCrossAccountAssume"
       effect  = "Allow"
-      actions = ["sts:AssumeRole"]
+      actions = distinct(concat(["sts:AssumeRole"], each.value.trust_policy_extra_actions))
 
       principals {
         type        = "AWS"
         identifiers = each.value.trusted_role_arns
+      }
+
+      dynamic "condition" {
+        for_each = each.value.trust_policy_conditions
+
+        content {
+          test     = condition.value.test
+          variable = condition.value.variable
+          values   = condition.value.values
+        }
       }
     }
   }
@@ -44,7 +64,7 @@ data "aws_iam_policy_document" "role_trust" {
     content {
       sid     = "AllowOIDCAssume${statement.key}"
       effect  = "Allow"
-      actions = ["sts:AssumeRoleWithWebIdentity"]
+      actions = distinct(concat(["sts:AssumeRoleWithWebIdentity"], each.value.trust_policy_extra_actions))
 
       principals {
         type        = "Federated"
@@ -53,6 +73,16 @@ data "aws_iam_policy_document" "role_trust" {
 
       dynamic "condition" {
         for_each = statement.value.conditions
+
+        content {
+          test     = condition.value.test
+          variable = condition.value.variable
+          values   = condition.value.values
+        }
+      }
+
+      dynamic "condition" {
+        for_each = each.value.trust_policy_conditions
 
         content {
           test     = condition.value.test
@@ -71,10 +101,7 @@ data "aws_iam_policy_document" "role_trust" {
 resource "aws_iam_role" "this" {
   for_each = local.all_roles
 
-  name = coalesce(
-    each.value.name,
-    "${local.name_prefix}iam-role-${var.account_name}-${var.project_name}-${each.key}"
-  )
+  name = local.role_names[each.key]
 
   description           = each.value.description
   path                  = each.value.path
@@ -87,7 +114,10 @@ resource "aws_iam_role" "this" {
     try(data.aws_iam_policy_document.role_trust[each.key].json, null)
   )
 
-  tags = merge(var.tags, each.value.tags)
+  tags = merge(local.tags, each.value.tags, {
+    Name      = local.role_names[each.key]
+    ManagedBy = "Terraform"
+  })
 }
 
 # =============================================================================

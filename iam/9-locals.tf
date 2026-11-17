@@ -56,9 +56,14 @@ locals {
   # Account and Partition Info
   # =============================================================================
 
-  account_id = data.aws_caller_identity.current.account_id
-  partition  = data.aws_partition.current.partition
   dns_suffix = data.aws_partition.current.dns_suffix
+
+  # =============================================================================
+  # Tags
+  # =============================================================================
+
+  # var.tags is kept for backward compatibility; it overrides var.tags_common on key conflicts
+  tags = merge(var.tags_common, var.tags)
 
   # =============================================================================
   # IAM Roles - Trust Policy Construction
@@ -70,15 +75,19 @@ locals {
     if var.create && role.assume_role_policy == null
   }
 
-  roles_with_raw_policy = {
-    for key, role in var.roles : key => role
-    if var.create && role.assume_role_policy != null
-  }
-
   # All roles to create
   all_roles = {
     for key, role in var.roles : key => role
     if var.create
+  }
+
+  # Role names: truncated to 64 chars (AWS IAM limit), trailing hyphen removed.
+  # Instance profiles reuse the role name.
+  role_names = {
+    for key, role in local.all_roles : key => coalesce(
+      role.name,
+      trimsuffix(substr("${local.name_prefix}iam-role-${var.account_name}-${var.project_name}-${key}", 0, 64), "-")
+    )
   }
 
   # =============================================================================
@@ -128,6 +137,14 @@ locals {
     if var.create
   }
 
+  # Policy names: truncated to 128 chars (AWS IAM limit), trailing hyphen removed
+  policy_names = {
+    for key, policy in local.all_policies : key => coalesce(
+      policy.name,
+      trimsuffix(substr("${local.name_prefix}iam-policy-${var.account_name}-${var.project_name}-${key}", 0, 128), "-")
+    )
+  }
+
   # =============================================================================
   # IAM Users
   # =============================================================================
@@ -160,17 +177,6 @@ locals {
     }
   ]...)
 
-  # User group memberships (flattened)
-  user_group_memberships = merge([
-    for user_key, user in local.all_users : {
-      for idx, group_name in user.groups :
-      "${user_key}:${group_name}" => {
-        user_key   = user_key
-        group_name = group_name
-      }
-    }
-  ]...)
-
   # =============================================================================
   # IAM Groups
   # =============================================================================
@@ -178,6 +184,14 @@ locals {
   all_groups = {
     for key, group in var.groups : key => group
     if var.create
+  }
+
+  # Group names: truncated to 128 chars (AWS IAM limit), trailing hyphen removed
+  group_names = {
+    for key, group in local.all_groups : key => coalesce(
+      group.name,
+      trimsuffix(substr("${local.name_prefix}iam-group-${var.account_name}-${var.project_name}-${key}", 0, 128), "-")
+    )
   }
 
   # Group managed policy attachments (flattened)
@@ -217,6 +231,7 @@ locals {
   # =============================================================================
 
   create_account_settings = var.create && var.account_settings != null
-  create_password_policy  = local.create_account_settings && var.account_settings.password_policy != null
-  create_account_alias    = local.create_account_settings && var.account_settings.account_alias != null
+  # try() keeps these null-safe on Terraform < 1.12, where && does not short-circuit
+  create_password_policy = local.create_account_settings && try(var.account_settings.password_policy, null) != null
+  create_account_alias   = local.create_account_settings && try(var.account_settings.account_alias, null) != null
 }
