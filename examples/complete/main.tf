@@ -1,12 +1,12 @@
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 module "iam" {
   source = "../../iam"
 
-  account_name = "prod"
-  project_name = "platform"
+  account_name = var.account_name
+  project_name = var.project_name
 
   # ---------------------------------------------------------------------------
   # IAM Roles
@@ -54,6 +54,13 @@ module "iam" {
       description          = "Allow CI/CD from tools account to deploy"
       trusted_role_arns    = ["arn:aws:iam::111111111111:root"]
       max_session_duration = 7200
+      trust_policy_conditions = [
+        {
+          test     = "StringEquals"
+          variable = "sts:ExternalId"
+          values   = ["platform-deploy"]
+        }
+      ]
       managed_policy_arns = [
         "arn:aws:iam::aws:policy/PowerUserAccess"
       ]
@@ -61,7 +68,8 @@ module "iam" {
 
     # GitHub Actions OIDC role
     github-actions = {
-      description = "GitHub Actions deployment role"
+      description                = "GitHub Actions deployment role"
+      trust_policy_extra_actions = ["sts:TagSession"]
       trusted_oidc_providers = [
         {
           provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
@@ -172,7 +180,7 @@ module "iam" {
       managed_policy_arns = [
         "arn:aws:iam::aws:policy/ReadOnlyAccess"
       ]
-      groups = ["readonly-group"]
+      group_keys = ["readonly"]
     }
   }
 
@@ -228,45 +236,8 @@ module "iam" {
     }
   }
 
-  tags = {
+  tags_common = {
     Environment = "prod"
     Team        = "platform"
-    ManagedBy   = "Terraform"
   }
-}
-
-# =============================================================================
-# Outputs
-# =============================================================================
-
-output "role_arns" {
-  value = module.iam.role_arns
-}
-
-output "role_names" {
-  value = module.iam.role_names
-}
-
-output "policy_arns" {
-  value = module.iam.policy_arns
-}
-
-output "user_arns" {
-  value = module.iam.user_arns
-}
-
-output "group_arns" {
-  value = module.iam.group_arns
-}
-
-output "group_names" {
-  value = module.iam.group_names
-}
-
-output "instance_profile_arns" {
-  value = module.iam.instance_profile_arns
-}
-
-output "oidc_provider_arns" {
-  value = module.iam.oidc_provider_arns
 }

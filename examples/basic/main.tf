@@ -1,12 +1,12 @@
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 module "iam" {
   source = "../../iam"
 
-  account_name = "dev"
-  project_name = "myapp"
+  account_name = var.account_name
+  project_name = var.project_name
 
   # ---------------------------------------------------------------------------
   # IAM Roles
@@ -55,24 +55,7 @@ module "iam" {
     }
   }
 
-  tags = {
+  tags_common = {
     Environment = "dev"
-    ManagedBy   = "Terraform"
   }
-}
-
-# =============================================================================
-# Outputs
-# =============================================================================
-
-output "role_arns" {
-  value = module.iam.role_arns
-}
-
-output "policy_arns" {
-  value = module.iam.policy_arns
-}
-
-output "instance_profile_arns" {
-  value = module.iam.instance_profile_arns
 }
