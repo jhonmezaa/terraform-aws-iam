@@ -71,6 +71,13 @@ output "policy_arns" {
   }
 }
 
+output "policy_names" {
+  description = "Map of IAM policy names, keyed by policy identifier."
+  value = {
+    for key, policy in aws_iam_policy.this : key => policy.name
+  }
+}
+
 # =============================================================================
 # IAM Users
 # =============================================================================
@@ -93,6 +100,13 @@ output "user_arns" {
   }
 }
 
+output "user_names" {
+  description = "Map of IAM user names, keyed by user identifier."
+  value = {
+    for key, user in aws_iam_user.this : key => user.name
+  }
+}
+
 output "user_login_profiles" {
   description = "Map of IAM user login profile details (encrypted passwords)."
   value = {
@@ -101,6 +115,14 @@ output "user_login_profiles" {
       key_fingerprint    = profile.key_fingerprint
     }
   }
+}
+
+output "user_login_profile_passwords" {
+  description = "Map of IAM user login profile plaintext passwords (sensitive), keyed by user identifier. Only populated when no pgp_key is set."
+  value = {
+    for key, profile in aws_iam_user_login_profile.this : key => profile.password
+  }
+  sensitive = true
 }
 
 output "user_access_keys" {
@@ -128,6 +150,25 @@ output "user_access_key_secrets" {
     for key, access_key in aws_iam_access_key.this : key => access_key.secret
   }
   sensitive = true
+}
+
+output "user_access_key_ses_smtp_passwords_v4" {
+  description = "Map of SES SMTP passwords (SigV4) derived from the access key secrets (sensitive), keyed by user identifier. Only populated when no pgp_key is set."
+  value = {
+    for key, access_key in aws_iam_access_key.this : key => access_key.ses_smtp_password_v4
+  }
+  sensitive = true
+}
+
+output "user_ssh_keys" {
+  description = "Map of IAM user SSH public key details, keyed by user identifier."
+  value = {
+    for key, ssh_key in aws_iam_user_ssh_key.this : key => {
+      ssh_public_key_id = ssh_key.ssh_public_key_id
+      fingerprint       = ssh_key.fingerprint
+      status            = ssh_key.status
+    }
+  }
 }
 
 # =============================================================================
@@ -188,4 +229,9 @@ output "oidc_provider_arns" {
 output "account_password_policy_expire_passwords" {
   description = "Whether passwords in the account expire."
   value       = try(aws_iam_account_password_policy.this[0].expire_passwords, null)
+}
+
+output "account_alias" {
+  description = "The IAM account alias, if managed by this module."
+  value       = try(aws_iam_account_alias.this[0].account_alias, null)
 }

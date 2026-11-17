@@ -14,12 +14,12 @@ variable "account_name" {
 
   validation {
     condition     = length(var.account_name) > 0 && length(var.account_name) <= 32
-    error_message = "account_name must be between 1 and 32 characters."
+    error_message = "account_name debe tener entre 1 y 32 caracteres."
   }
 
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.account_name))
-    error_message = "account_name can only contain lowercase letters, numbers, and hyphens."
+    error_message = "account_name solo puede contener letras minúsculas, números y guiones."
   }
 }
 
@@ -29,12 +29,12 @@ variable "project_name" {
 
   validation {
     condition     = length(var.project_name) > 0 && length(var.project_name) <= 32
-    error_message = "project_name must be between 1 and 32 characters."
+    error_message = "project_name debe tener entre 1 y 32 caracteres."
   }
 
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.project_name))
-    error_message = "project_name can only contain lowercase letters, numbers, and hyphens."
+    error_message = "project_name solo puede contener letras minúsculas, números y guiones."
   }
 }
 
@@ -50,8 +50,14 @@ variable "use_region_prefix" {
   default     = true
 }
 
+variable "tags_common" {
+  description = "Common tags to apply to all IAM resources that support tagging."
+  type        = map(string)
+  default     = {}
+}
+
 variable "tags" {
-  description = "Additional tags to apply to all IAM resources that support tagging."
+  description = "Additional tags to apply to all IAM resources that support tagging. Kept for backward compatibility; prefer `tags_common`. Merged on top of `tags_common`."
   type        = map(string)
   default     = {}
 }
@@ -80,11 +86,21 @@ variable "roles" {
     trusted_role_arns  = optional(list(string), [])
     trusted_oidc_providers = optional(list(object({
       provider_arn = string
-      conditions = list(object({
+      conditions = optional(list(object({
         test     = string
         variable = string
         values   = list(string)
-      }))
+      })), [])
+    })), [])
+
+    # Extra actions added to every generated trust statement (e.g. sts:TagSession, sts:SetSourceIdentity)
+    trust_policy_extra_actions = optional(list(string), [])
+
+    # Extra conditions applied to every generated trust statement (e.g. sts:ExternalId, aws:PrincipalOrgID)
+    trust_policy_conditions = optional(list(object({
+      test     = string
+      variable = string
+      values   = list(string)
     })), [])
 
     # Attached policies
@@ -97,6 +113,20 @@ variable "roles" {
     tags = optional(map(string), {})
   }))
   default = {}
+
+  validation {
+    condition = alltrue([
+      for k, r in var.roles : r.max_session_duration >= 3600 && r.max_session_duration <= 43200
+    ])
+    error_message = "roles[*].max_session_duration debe estar entre 3600 y 43200 segundos."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, r in var.roles : r.assume_role_policy != null || length(r.trusted_services) > 0 || length(r.trusted_role_arns) > 0 || length(r.trusted_oidc_providers) > 0
+    ])
+    error_message = "Cada rol en roles debe definir assume_role_policy o al menos uno de trusted_services, trusted_role_arns o trusted_oidc_providers."
+  }
 }
 
 # =============================================================================
@@ -143,6 +173,11 @@ variable "users" {
     create_access_key = optional(bool, false)
     access_key_status = optional(string)
 
+    # SSH public key (e.g. for CodeCommit)
+    ssh_public_key   = optional(string)
+    ssh_key_encoding = optional(string, "SSH")
+    ssh_key_status   = optional(string)
+
     # Policies and groups
     managed_policy_arns = optional(list(string), [])
     inline_policies     = optional(map(string), {})
@@ -152,6 +187,27 @@ variable "users" {
     tags = optional(map(string), {})
   }))
   default = {}
+
+  validation {
+    condition = alltrue([
+      for k, u in var.users : u.access_key_status == null || contains(["Active", "Inactive"], coalesce(u.access_key_status, "Active"))
+    ])
+    error_message = "users[*].access_key_status debe ser \"Active\", \"Inactive\" o null."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, u in var.users : contains(["SSH", "PEM"], u.ssh_key_encoding)
+    ])
+    error_message = "users[*].ssh_key_encoding debe ser \"SSH\" o \"PEM\"."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, u in var.users : contains(["Active", "Inactive"], coalesce(u.ssh_key_status, "Active"))
+    ])
+    error_message = "users[*].ssh_key_status debe ser \"Active\", \"Inactive\" o null."
+  }
 }
 
 # =============================================================================

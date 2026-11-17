@@ -5,10 +5,7 @@
 resource "aws_iam_group" "this" {
   for_each = local.all_groups
 
-  name = coalesce(
-    each.value.name,
-    "${local.name_prefix}iam-group-${var.account_name}-${var.project_name}-${each.key}"
-  )
+  name = local.group_names[each.key]
 
   path = each.value.path
 }

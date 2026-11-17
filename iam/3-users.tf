@@ -10,7 +10,10 @@ resource "aws_iam_user" "this" {
   permissions_boundary = each.value.permissions_boundary
   force_destroy        = each.value.force_destroy
 
-  tags = merge(var.tags, each.value.tags)
+  tags = merge(local.tags, each.value.tags, {
+    Name      = coalesce(each.value.name, each.key)
+    ManagedBy = "Terraform"
+  })
 }
 
 # =============================================================================
@@ -82,4 +85,20 @@ resource "aws_iam_user_group_membership" "this" {
     each.value.groups,
     [for gk in each.value.group_keys : aws_iam_group.this[gk].name]
   )
+}
+
+# =============================================================================
+# IAM User - SSH Public Keys
+# =============================================================================
+
+resource "aws_iam_user_ssh_key" "this" {
+  for_each = {
+    for key, user in local.all_users : key => user
+    if user.ssh_public_key != null
+  }
+
+  username   = aws_iam_user.this[each.key].name
+  encoding   = each.value.ssh_key_encoding
+  public_key = each.value.ssh_public_key
+  status     = each.value.ssh_key_status
 }

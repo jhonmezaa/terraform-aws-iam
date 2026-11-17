@@ -5,14 +5,14 @@
 resource "aws_iam_policy" "this" {
   for_each = local.all_policies
 
-  name = coalesce(
-    each.value.name,
-    "${local.name_prefix}iam-policy-${var.account_name}-${var.project_name}-${each.key}"
-  )
+  name = local.policy_names[each.key]
 
   description = each.value.description
   path        = each.value.path
   policy      = each.value.policy
 
-  tags = merge(var.tags, each.value.tags)
+  tags = merge(local.tags, each.value.tags, {
+    Name      = local.policy_names[each.key]
+    ManagedBy = "Terraform"
+  })
 }
