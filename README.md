@@ -19,7 +19,7 @@ Terraform module for managing AWS IAM resources including roles, policies, users
 
 ```hcl
 module "iam" {
-  source = "github.com/jhonmezaa/terraform-aws-iam//iam"
+  source = "github.com/jhonmezaa/terraform-aws-iam//iam?ref=v1.2.0"
 
   account_name = "dev"
   project_name = "myapp"
@@ -43,9 +43,8 @@ module "iam" {
     }
   }
 
-  tags = {
+  tags_common = {
     Environment = "dev"
-    ManagedBy   = "Terraform"
   }
 }
 ```
@@ -54,7 +53,7 @@ module "iam" {
 
 ```hcl
 module "iam" {
-  source = "github.com/jhonmezaa/terraform-aws-iam//iam"
+  source = "github.com/jhonmezaa/terraform-aws-iam//iam?ref=v1.2.0"
 
   account_name = "prod"
   project_name = "platform"
@@ -99,7 +98,7 @@ module "iam" {
 
 ```hcl
 module "iam" {
-  source = "github.com/jhonmezaa/terraform-aws-iam//iam"
+  source = "github.com/jhonmezaa/terraform-aws-iam//iam?ref=v1.2.0"
 
   account_name = "prod"
   project_name = "shared"
@@ -109,6 +108,13 @@ module "iam" {
       description          = "Allow CI/CD from tools account"
       trusted_role_arns    = ["arn:aws:iam::111111111111:root"]
       max_session_duration = 7200
+      trust_policy_conditions = [
+        {
+          test     = "StringEquals"
+          variable = "sts:ExternalId"
+          values   = ["my-external-id"]
+        }
+      ]
       managed_policy_arns = [
         "arn:aws:iam::aws:policy/PowerUserAccess"
       ]
@@ -121,7 +127,7 @@ module "iam" {
 
 ```hcl
 module "iam" {
-  source = "github.com/jhonmezaa/terraform-aws-iam//iam"
+  source = "github.com/jhonmezaa/terraform-aws-iam//iam?ref=v1.2.0"
 
   account_name = "prod"
   project_name = "platform"
@@ -142,16 +148,22 @@ module "iam" {
       managed_policy_arns = [
         "arn:aws:iam::aws:policy/PowerUserAccess"
       ]
+      # Reference groups created by this module by key
+      group_keys = ["developers"]
     }
   }
 }
 ```
 
+> **Note:** `groups[*].user_names` uses `aws_iam_group_membership`, which is _exclusive_ for the group.
+> Do not combine it with `users[*].groups` / `users[*].group_keys` for the same group, or Terraform will
+> show a perpetual diff. Pick one membership style per group.
+
 ### Account Password Policy
 
 ```hcl
 module "iam" {
-  source = "github.com/jhonmezaa/terraform-aws-iam//iam"
+  source = "github.com/jhonmezaa/terraform-aws-iam//iam?ref=v1.2.0"
 
   account_name = "prod"
   project_name = "security"
@@ -187,7 +199,8 @@ module "iam" {
 | project_name      | Project name for resource naming | `string`      | required               |
 | region_prefix     | Region prefix override           | `string`      | `null` (auto-detected) |
 | use_region_prefix | Include region prefix in names   | `bool`        | `true`                 |
-| tags              | Tags for all resources           | `map(string)` | `{}`                   |
+| tags_common       | Common tags for all resources    | `map(string)` | `{}`                   |
+| tags              | Legacy alias of `tags_common` (merged on top of it) | `map(string)` | `{}` |
 | roles             | Map of IAM roles to create       | `map(object)` | `{}`                   |
 | policies          | Map of IAM policies to create    | `map(object)` | `{}`                   |
 | users             | Map of IAM users to create       | `map(object)` | `{}`                   |
@@ -217,6 +230,26 @@ module "iam" {
 | group_names             | Map of group names                          |
 | oidc_providers          | Map of OIDC provider details                |
 | oidc_provider_arns      | Map of OIDC provider ARNs                   |
+| policy_names            | Map of policy names                         |
+| user_names              | Map of user names                           |
+| user_login_profile_passwords | Map of plaintext login passwords (sensitive, only without `pgp_key`) |
+| user_access_key_ses_smtp_passwords_v4 | Map of SES SMTP passwords (sensitive, only without `pgp_key`) |
+| user_ssh_keys           | Map of SSH key details (id, fingerprint, status) |
+| account_alias           | Account alias (if managed)                  |
+| account_password_policy_expire_passwords | Whether account passwords expire |
+
+### Notable object attributes
+
+- `roles[*]`: `name`, `description`, `path`, `max_session_duration` (3600-43200), `force_detach_policies`,
+  `permissions_boundary`, `assume_role_policy` (raw JSON, takes precedence), `trusted_services`,
+  `trusted_role_arns`, `trusted_oidc_providers` (`provider_arn`, optional `conditions`),
+  `trust_policy_conditions` (added to every generated trust statement, e.g. `sts:ExternalId`),
+  `trust_policy_extra_actions` (e.g. `sts:TagSession`), `managed_policy_arns`, `inline_policies`,
+  `create_instance_profile`, `tags`. Each role must define `assume_role_policy` or at least one trusted principal.
+- `users[*]`: `name`, `path`, `permissions_boundary`, `force_destroy`, `create_login_profile`, `pgp_key`,
+  `password_length`, `password_reset_required`, `create_access_key`, `access_key_status`,
+  `ssh_public_key`, `ssh_key_encoding` (`SSH`/`PEM`), `ssh_key_status`, `managed_policy_arns`,
+  `inline_policies`, `groups` (literal group names), `group_keys` (keys of `groups`), `tags`.
 
 ## Naming Convention
 
@@ -227,6 +260,12 @@ Examples:
 - Role: `ause1-iam-role-prod-myapp-lambda-execution`
 - Policy: `ause1-iam-policy-prod-myapp-s3-read`
 - Group: `ause1-iam-group-prod-myapp-developers`
+
+Generated names are truncated to the AWS limits (64 characters for roles/instance profiles, 128 for
+policies and groups). Any resource can be named explicitly with `name`. IAM users are named after
+their key (or `name`), since they usually represent real identities. All taggable resources get
+`merge(tags_common, tags, <resource tags>, { Name, ManagedBy = "Terraform" })`; IAM groups do not
+support tags.
 
 ## License
 
